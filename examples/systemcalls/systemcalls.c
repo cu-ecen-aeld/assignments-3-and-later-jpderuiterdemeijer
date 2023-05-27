@@ -1,5 +1,10 @@
 #include "systemcalls.h"
 
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
 /**
  * @param cmd the command to execute with system()
  * @return true if the command in @param cmd was executed
@@ -9,15 +14,11 @@
 */
 bool do_system(const char *cmd)
 {
+    // Call the command with system(), and store return value
+    int result = system(cmd);
 
-/*
- * TODO  add your code here
- *  Call the system() function with the command set in the cmd
- *   and return a boolean true if the system() call completed with success
- *   or false() if it returned a failure
-*/
-
-    return true;
+    // Determine result, and return accordingly
+    return (result == 0) ? true : false;
 }
 
 /**
@@ -49,17 +50,35 @@ bool do_exec(int count, ...)
     // and may be removed
     command[count] = command[count];
 
-/*
- * TODO:
- *   Execute a system command by calling fork, execv(),
- *   and wait instead of system (see LSP page 161).
- *   Use the command[0] as the full path to the command to execute
- *   (first argument to execv), and use the remaining arguments
- *   as second argument to the execv() command.
- *
-*/
-
     va_end(args);
+
+    // Create a new process
+    pid_t fork_pid = fork();
+    int status = 0;
+
+    if (fork_pid >= 0) {
+        // Process created succesfully
+
+        if (fork_pid >= 0) {
+            // The process we are in is the child process launched by the parent process
+
+            // Since this is the child process, execute the command
+            execv(command[0], &command[1]);
+
+            // execv() only returns in case of error, so return 'false' 
+            return false;
+        } else {
+           // The process we are in is the parent process
+
+           // Wait for the child process to end
+           wait(&status);
+
+           // When wait returns, the child process was ended (or changed state)
+        }
+    } else {
+       // An error occured when creating a new process, return false
+       return false;
+    }
 
     return true;
 }
@@ -85,15 +104,56 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = command[count];
 
 
-/*
- * TODO
- *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
- *   redirect standard out to a file specified by outputfile.
- *   The rest of the behaviour is same as do_exec()
- *
-*/
-
     va_end(args);
+
+    // Create and open the redirect file for writing
+    int redirect_file = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+
+    if (redirect_file < 0) {
+        // Creating/Opening the redirect file failed, return false
+       return false;
+    }
+
+    // Create a new process
+    pid_t fork_pid = fork();
+    int status = 0;
+
+    if (fork_pid >= 0) {
+        // Process created succesfully
+
+        if (fork_pid >= 0) {
+            // The process we are in is the child process launched by the parent process
+
+            // Redirect stdout from the child process to the stdout of the parent
+            if (dup2(redirect_file, 1) < 0) {
+                // Redirecting filed
+                return false;
+            }
+
+            close(redirect_file);
+
+            // Since this is the child process, execute the command
+            execv(command[0], &command[1]);
+
+            // execv() only returns in case of error, so return 'false' 
+            return false;
+        } else {
+           // The process we are in is the parent process
+
+           close(redirect_file);
+
+           // Wait for the child process to end
+           wait(&status);
+
+           // When wait returns, the child process was ended (or changed state)
+        }
+    } else {
+       // An error occured when creating a new process, return false
+
+       close(redirect_file);
+
+       return false;
+    }
 
     return true;
 }
