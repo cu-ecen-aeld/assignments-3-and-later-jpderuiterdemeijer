@@ -70,7 +70,9 @@ mkdir "rootfs"
 cd "${OUTDIR}/rootfs"
 
 # Creating root folders
-mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
+mkdir -p bin dev etc lib lib64 proc sbin sys tmp usr var
+# Creating root folders
+mkdir -p -m 777 home
 # Creating user folders
 mkdir -p usr/bin usr/lib usr/sbin
 # Creating runtime files folder
@@ -121,22 +123,26 @@ sudo mknod -m 666 dev/console c 5 1
 
 # Clean and build the writer utility
 cd ${FINDER_APP_DIR}
-echo "Removing the old writer utility and compiling as a native application"
+echo "Removing the old writer utility and cross-compiling"
 make clean
-make
-
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 
 # Copy the finder related scripts and executables to the /home directory
-# on the target rootfs
 cp writer ${OUTDIR}/rootfs/home
 cp finder.sh ${OUTDIR}/rootfs/home
 cp finder-test.sh ${OUTDIR}/rootfs/home
 cp autorun-qemu.sh ${OUTDIR}/rootfs/home
-mkdir -p ${OUTDIR}/rootfs/home/conf
-cp conf/assignment.txt ${OUTDIR}/rootfs/home/conf
-cp conf/username.txt ${OUTDIR}/rootfs/home/conf
+mkdir -p ${OUTDIR}/rootfs/conf
+cp conf/assignment.txt ${OUTDIR}/rootfs/conf
+cp conf/username.txt ${OUTDIR}/rootfs/conf
+cd ${OUTDIR}/rootfs/home
+ln -s ../conf conf
 
 # Chown the root directory
+sudo chown root:root ${OUTDIR}/rootfs
+echo 'root:x:0:' > ${OUTDIR}/rootfs/etc/group
+echo 'root:x:0:0:root:/root:/bin/sh' > ${OUTDIR}/rootfs/etc/passwd
+
 cd "${OUTDIR}/rootfs"
 find . | cpio -H newc -ov --owner root:root > ${OUTDIR}/initramfs.cpio
 
