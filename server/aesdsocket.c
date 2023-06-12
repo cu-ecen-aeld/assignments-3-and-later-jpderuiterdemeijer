@@ -145,8 +145,9 @@ int main(int argc, char* argv[]) {
 
    // Socket Server implementation
 
-   struct addrinfo    hints, *pServer_info;
+   struct sockaddr_in localAddress;
    struct sockaddr_in remoteAddress;
+   
    localSocket = socket(AF_INET, SOCK_STREAM, 0);
    if (localSocket == -1) {
       syslog(LOG_ERR, "socket() failed\n");
@@ -154,30 +155,16 @@ int main(int argc, char* argv[]) {
       exit(1);
    }
 
-   // Create hints struct, start with empty struct
-   memset(&hints, 0, sizeof(hints));
-   hints.ai_family = AF_INET;
-   hints.ai_socktype = SOCK_STREAM;
-   hints.ai_flags = AI_PASSIVE;
-
-   // Try to get IPv4 address info on local port 9000
-   if (getaddrinfo(NULL, "9000", &hints, &pServer_info) != 0) {
-      // Exit when address info could not retrieved
-      syslog(LOG_ERR, "Could not retrieve address info for local port 9000");
-      prepareExit();
-      exit(1);
-   }
+   localAddress.sin_family=AF_INET;
+   localAddress.sin_port=htons(9000);
+   localAddress.sin_addr.s_addr=inet_addr("0.0.0.0");
 
    // Bind to IPv4 port 9000
-   if (bind(localSocket, pServer_info->ai_addr, pServer_info->ai_addrlen) == -1) {
+   if (bind(localSocket, (struct sockaddr*)&localAddress, sizeof(localAddress)) == -1) {
       syslog(LOG_ERR, "Could not bind to port 9000");
-      freeaddrinfo(pServer_info);
       prepareExit();
       exit(1);
    }
-
-   // Free address info, no longer needed
-   freeaddrinfo(pServer_info);
 
    if (listen(localSocket, 1)) {
       syslog(LOG_ERR, "listen() failed\n");
