@@ -20,7 +20,7 @@ int   remoteSocket = -1;
 int   logFile = -1;
 char* pPacketBuffer = NULL;
 
-void prepareClose(void) {
+void prepareClose() {
 
    packetBufferOffset = 0;
    if (pPacketBuffer != NULL) {
@@ -32,11 +32,11 @@ void prepareClose(void) {
       close(remoteSocket);
       remoteSocket = -1;
    }
-
-   closelog();
 }
 
-void closeSocket(void) {
+void prepareExit() {
+   prepareClose();
+   
    if (localSocket != -1) {
       close(localSocket);
    }
@@ -45,20 +45,20 @@ void closeSocket(void) {
       logFile = -1;
    }
    remove("/var/tmp/aesdsocketdata");
+   
+   closelog();
 }
 
 void signalsCallback(int signal) {
 
    if (signal == SIGINT) {
       syslog(LOG_DEBUG, "SIGINT caught, exiting\n");
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(0);
    }
    if (signal == SIGTERM) {
       syslog(LOG_DEBUG, "SIGTERM caught, exiting\n");
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(0);
    }
 }
@@ -91,10 +91,12 @@ int main(int argc, char* argv[]) {
          pid = fork();
          if (pid < 0) {
             syslog(LOG_ERR, "fork() failed\n");
+            closelog();
             exit(1);
          }
          if (pid > 0) {
             // We are parent, nothing to do
+            closelog();
             exit(0);
          }
 
@@ -108,6 +110,7 @@ int main(int argc, char* argv[]) {
 
          if (sid < 0) {
             syslog(LOG_ERR, "setsid() failed\n");
+            closelog();
             exit(1);
          }
 
@@ -127,6 +130,7 @@ int main(int argc, char* argv[]) {
          int ret = chdir("/");
          if (ret < 0) {
             syslog(LOG_ERR, "chdir() failed\n");
+            closelog();
             exit(1);
          }
 
@@ -160,9 +164,7 @@ int main(int argc, char* argv[]) {
    if (getaddrinfo(NULL, "9000", &hints, &pServer_info) != 0) {
       // Exit when address info could not retrieved
       syslog(LOG_ERR, "Could not retrieve address info for local port 9000");
-      closelog();
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(1);
    }
 
@@ -170,8 +172,7 @@ int main(int argc, char* argv[]) {
    if (bind(localSocket, pServer_info->ai_addr, pServer_info->ai_addrlen) == -1) {
       syslog(LOG_ERR, "Could not bind to port 9000");
       freeaddrinfo(pServer_info);
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(1);
    }
 
@@ -180,16 +181,14 @@ int main(int argc, char* argv[]) {
 
    if (listen(localSocket, 1)) {
       syslog(LOG_ERR, "listen() failed\n");
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(1);
    }
 
    logFile = open("/var/tmp/aesdsocketdata", O_CREAT | O_TRUNC | O_RDWR, 0666);
    if (logFile == -1) {
       syslog(LOG_ERR, "open logfile failed\n");
-      prepareClose();
-      closeSocket();
+      prepareExit();
       exit(1);
    }
 
@@ -201,8 +200,7 @@ int main(int argc, char* argv[]) {
       remoteSocket = accept(localSocket, (struct sockaddr*)&remoteAddress, &len);
       if (remoteSocket == -1) {
          syslog(LOG_ERR, "accept failed\n");
-         prepareClose();
-         closeSocket();
+         prepareExit();
          exit(1);
       }
       syslog(LOG_DEBUG, "Accepted connection from %s\n", inet_ntoa(remoteAddress.sin_addr));
@@ -218,8 +216,7 @@ int main(int argc, char* argv[]) {
          pPacketBuffer = (char*)realloc(pPacketBuffer, packetBufferSize);
          if (pPacketBuffer == NULL) {
             syslog(LOG_ERR, "realloc() failed\n");
-            prepareClose();
-            closeSocket();
+            prepareExit();
             exit(1);
          }
 
