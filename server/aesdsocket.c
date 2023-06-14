@@ -15,10 +15,10 @@
 #define REC_CHUNK_SIZE (20)
 
 int   packetBufferOffset = 0;
-int   localSocket = -1;
-int   remoteSocket = -1;
-int   logFile = -1;
-char* pPacketBuffer = NULL;
+int   localSocket        = -1;
+int   remoteSocket       = -1;
+int   logFile            = -1;
+char* pPacketBuffer      = NULL;
 
 void prepareClose() {
 
@@ -36,7 +36,7 @@ void prepareClose() {
 
 void prepareExit() {
    prepareClose();
-   
+
    if (localSocket != -1) {
       close(localSocket);
    }
@@ -45,7 +45,7 @@ void prepareExit() {
       logFile = -1;
    }
    remove("/var/tmp/aesdsocketdata");
-   
+
    closelog();
 }
 
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
 
    struct sockaddr_in localAddress;
    struct sockaddr_in remoteAddress;
-   
+
    localSocket = socket(AF_INET, SOCK_STREAM, 0);
    if (localSocket == -1) {
       syslog(LOG_ERR, "socket() failed\n");
@@ -155,9 +155,9 @@ int main(int argc, char* argv[]) {
       exit(1);
    }
 
-   localAddress.sin_family=AF_INET;
-   localAddress.sin_port=htons(9000);
-   localAddress.sin_addr.s_addr=inet_addr("0.0.0.0");
+   localAddress.sin_family      = AF_INET;
+   localAddress.sin_port        = htons(9000);
+   localAddress.sin_addr.s_addr = inet_addr("0.0.0.0");
 
    // Bind to IPv4 port 9000
    if (bind(localSocket, (struct sockaddr*)&localAddress, sizeof(localAddress)) == -1) {
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
    while (1) {
 
       unsigned int len = sizeof(remoteAddress);
-      remoteSocket = accept(localSocket, (struct sockaddr*)&remoteAddress, &len);
+      remoteSocket     = accept(localSocket, (struct sockaddr*)&remoteAddress, &len);
       if (remoteSocket == -1) {
          syslog(LOG_ERR, "accept failed\n");
          prepareExit();
@@ -193,9 +193,9 @@ int main(int argc, char* argv[]) {
       syslog(LOG_DEBUG, "Accepted connection from %s\n", inet_ntoa(remoteAddress.sin_addr));
 
       // init packet buffer size
-      int packetBufferSize = REC_CHUNK_SIZE;
+      int packetBufferSize     = REC_CHUNK_SIZE;
       int receivedPacketLength = 0;
-      packetBufferOffset = 0;
+      packetBufferOffset       = 0;
 
       while (1) {
 
@@ -251,9 +251,9 @@ int main(int argc, char* argv[]) {
             }
 
             // Reset buffer for new packet
-            packetBufferSize = REC_CHUNK_SIZE;
+            packetBufferSize     = REC_CHUNK_SIZE;
             receivedPacketLength = 0;
-            packetBufferOffset = 0;
+            packetBufferOffset   = 0;
          } else {
             // Waiting for more data, increase buffer
             packetBufferSize = packetBufferSize + REC_CHUNK_SIZE;
