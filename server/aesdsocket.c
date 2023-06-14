@@ -122,9 +122,9 @@ int main(int argc, char* argv[]) {
          // Open stdin as /dev/null;
          int std_handle = open("/dev/null", O_RDWR);
          // Copy to stdout
-         dup(std_handle);
+         (void)dup(std_handle);
          // Copy to stderr
-         dup(std_handle);
+         (void)dup(std_handle);
 
          // chdir to working dir
          int ret = chdir("/");
