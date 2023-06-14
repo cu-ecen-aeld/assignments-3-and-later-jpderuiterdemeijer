@@ -121,10 +121,27 @@ int main(int argc, char* argv[]) {
 
          // Open stdin as /dev/null;
          int std_handle = open("/dev/null", O_RDWR);
+         if (std_handle < 0) {
+            syslog(LOG_ERR, "opening /dev/null failed\n");
+            closelog();
+            exit(1);
+         }
+
          // Copy to stdout
-         (void)dup(std_handle);
+         std_handle = dup(std_handle);
+         if (std_handle < 0) {
+            syslog(LOG_ERR, "dup(0) (stdout) failed\n");
+            closelog();
+            exit(1);
+         }
+
          // Copy to stderr
-         (void)dup(std_handle);
+         std_handle = dup(std_handle);
+         if (std_handle < 0) {
+            syslog(LOG_ERR, "dup(0) (stderr) failed\n");
+            closelog();
+            exit(1);
+         }
 
          // chdir to working dir
          int ret = chdir("/");
