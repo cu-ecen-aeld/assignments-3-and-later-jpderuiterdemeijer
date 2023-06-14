@@ -114,10 +114,10 @@ int main(int argc, char* argv[]) {
             exit(1);
          }
 
-         // close all existing file descriptors
-         for (int i = getdtablesize(); i >= 0; --i) {
-            close(i);
-         }
+         // close all std file descriptors
+         close(0);
+         close(1);
+         close(2);
 
          // Open stdin as /dev/null;
          int std_handle = open("/dev/null", O_RDWR);
